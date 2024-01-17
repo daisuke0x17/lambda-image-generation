@@ -39,7 +39,7 @@ echo "(4/6) Push Container"
 docker push ${ACCOUNTID}.dkr.ecr.${REGION}.amazonaws.com/${REPOSITORYNAME}:latest
 
 echo "(5/6) Create S3 Bucket"
-aws s3api create-bucket --bucket ${BUCKETNAME} --region ${REGION}
+aws s3api create-bucket --bucket ${BUCKETNAME} --region ${REGION} --create-bucket-configuration LocationConstraint=${REGION}
 
 echo "(6/6) Create Lambda"
 ROLE_ARN=arn:aws:iam::${ACCOUNTID}:role/${ROLENAME}
