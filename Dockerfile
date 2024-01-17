@@ -2,8 +2,11 @@ FROM public.ecr.aws/lambda/python:3.9 as builder
 COPY openvino-2022.repo /etc/yum.repos.d
 RUN yum -y update && yum -y install openvino-2022.1.0 gcc make gcc-c++ zlib-devel bison bison-devel gzip glibc-static wget tar git
 RUN wget https://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.gz && tar zxvf glibc-2.27.tar.gz && rm glibc-2.27.tar.gz && mv ./glibc-2.27/ /opt/glibc-2.27/
-RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | bash
-RUN yum install -y git-lfs && git lfs install && git clone https://huggingface.co/bes-dev/stable-diffusion-v1-4-openvino
+RUN wget https://github.com/git-lfs/git-lfs/releases/download/v2.13.3/git-lfs-linux-amd64-v2.13.3.tar.gz && \
+    tar -zxvf git-lfs-linux-amd64-v2.13.3.tar.gz && \
+    sh ./install.sh && \
+    rm -rf git-lfs-2.13.3 git-lfs-linux-amd64-v2.13.3.tar.gz
+RUN git lfs install && git clone https://huggingface.co/bes-dev/stable-diffusion-v1-4-openvino
 ENV GIT_LFS_SKIP_SMUDGE=1
 RUN git clone https://huggingface.co/openai/clip-vit-large-patch14
 WORKDIR /opt/glibc-2.27/build
