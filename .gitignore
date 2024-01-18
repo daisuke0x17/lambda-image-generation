@@ -136,3 +136,4 @@ clip-vit-large-patch14/
 push.sh
 uninstall-*.sh
 tmp/
+output.text
