@@ -1,5 +1,6 @@
 
 ## 概要
+Serverless (AWS Lambda)で stable_diffusion.openvino を動かすためのリポジトリです．
 ### 準備
 AWS CLI のインストール
 - https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
@@ -20,9 +21,15 @@ Default output format [None]:
 ### デプロイ
 ```bash:
 $ sh ./install.sh
-(Create New) Input AWS Lambda Function Name [ex.mySdFunction]: YOUR LAMBDA FUNCTION NAME
 ```
 ※PC性能，ネットワーク環境によりますが，20分~40分程度は見ておいてください（イメージのビルドとプッシュが重いです）
+
+## 注意事項
+- ビルドに時間がかかるのは仕様です
+- Lambda のタイムアウトは 15 分，メモリは 10 GB に設定しています
+- ECR にプッシュできるイメージの最大サイズは 10 GB です
+- Lambda 実行中に書き込み権限があるのは /tmp だけです
+  - また実行中に外部との疎通は基本できないので，モデルは事前にダウンロードしてイメージに入れてます
 
 ## 参考
 とりあえずローカルで動かしてみる（ローカル汚したくない人は venv 使いましょう）

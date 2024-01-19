@@ -29,9 +29,7 @@ aws iam attach-role-policy --role-name ${ROLENAME} --policy-arn arn:aws:iam::aws
 
 echo "(3/5) Build Container"
 aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACCOUNTID}.dkr.ecr.${REGION}.amazonaws.com
-# --progress=plain
-# --platform=linux/amd64
-docker build -t ${REPOSITORYNAME} .
+docker build --no-cache -t ${REPOSITORYNAME} .
 docker tag ${REPOSITORYNAME}:latest ${ACCOUNTID}.dkr.ecr.${REGION}.amazonaws.com/${REPOSITORYNAME}:latest
 
 echo "(4/5) Push Container"
@@ -42,7 +40,7 @@ ROLE_ARN=arn:aws:iam::${ACCOUNTID}:role/${ROLENAME}
 DIGEST=$(aws ecr list-images --repository-name ${REPOSITORYNAME} --out text --query 'imageIds[?imageTag==`latest`].imageDigest')
 aws lambda create-function --function-name ${LAMBDANAME} --out text \
     --package-type Image --code ImageUri=${ACCOUNTID}.dkr.ecr.${REGION}.amazonaws.com/${REPOSITORYNAME}@${DIGEST} \
-    --memory-size 10240 --timeout 600 Size=5120 \
+    --memory-size 10240 --timeout 600 --ephemeral-storage '{"Size": 5120}' \
     --role ${ROLE_ARN}
 
 # uninstaller
