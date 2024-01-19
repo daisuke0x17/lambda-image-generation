@@ -39,7 +39,7 @@ COPY --from=builder \
     /var/task/clip-vit-large-patch14/tokenizer.json /var/task/tokenizer/
 ENV TRANSFORMERS_CACHE /tmp/cache/transformers
 ENV HF_HOME /tmp/cache/huggingface
-COPY demo.py ${LAMBDA_TASK_ROOT}
+COPY app.py ${LAMBDA_TASK_ROOT}
 COPY stable_diffusion_engine.py ${LAMBDA_TASK_ROOT}
 
-CMD [ "demo.handler" ]
+CMD [ "app.handler" ]
