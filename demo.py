@@ -1,74 +1,72 @@
 # -- coding: utf-8 --`
-import os
 import argparse
+import gc
 import json
-import botocore
-import boto3
- 
-def main(args):
-    cfg = botocore.config.Config(retries={'max_attempts': 0}, read_timeout=900, connect_timeout=900)
-    args = {k: v for k, v in args.items() if v is not None}
+import os
+import random
+# engine
+from stable_diffusion_engine import StableDiffusionEngine
+# scheduler
+from diffusers import LMSDiscreteScheduler, PNDMScheduler
+# utils
+import cv2
+import numpy as np
+from openvino.runtime import Core
 
-    try:
-        lambda_client = boto3.client('lambda', config=cfg)
-        s3_resource = boto3.resource('s3')
-        results = {}
+os.environ['HUGGINGFACE_CACHE'] = '/tmp/cache/huggingface'
 
-        for num in range(args['n']):
-            if num == args['limit']:
-                break
+DEFAULT_SEED = None
+DEFAULT_INIT_IMAGE = None
+DEFAULT_BETA_START = 0.00085
+DEFAULT_BETA_END = 0.012
+DEFAULT_BETA_SCHEDULE = "scaled_linear"
+DEFAULT_MODEL = "bes-dev/stable-diffusion-v1-4-openvino"
+DEFAULT_TOKENIZER = "openai/clip-vit-large-patch14"
+DEFAULT_DEVICE = "CPU"
+DEFAULT_PROMPT = "a photograph of an astronaut riding a horse"
+DEFAULT_MASK = None
+DEFAULT_STRENGTH = 0.5
+DEFAULT_NUM_INFERENCE_STEPS = 32
+DEFAULT_GUIDANCE_SCALE = 7.5
+DEFAULT_ETA = 0.0
+DEFAULT_OUTPUT = "output.png"
 
-            response = lambda_client.invoke(
-                FunctionName=args['lambda'],
-                InvocationType='RequestResponse',
-                Payload=json.dumps(args)
-                )
-
-            json_dict = json.loads(response['Payload'].read().decode('utf-8'))
-
-            if json_dict['statusCode'] == 200:
-                if 'bucket' in json_dict['body']:
-                    s3_resource.Bucket(
-                        json_dict['body']['bucket']).download_file(json_dict['body']['output'],
-                        os.path.join(args['save'], json_dict['body']['output'])
-                        )
-            else:
-                break
-            results[num] = json_dict
-
-        print(json.dumps(results, indent=2))
-
-    except Exception as e:
-        print(e)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    # Lambda Functionn
-    parser.add_argument("--lambda", type=str, required=True, help="Lambda Function Name")
-    # randomizer params
-    parser.add_argument("--seed", type=int, default=None, help="random seed for generating consistent images per prompt")
-    # scheduler params
-    parser.add_argument("--beta_start", type=float, default=None, help="LMSDiscreteScheduler::beta_start")
-    parser.add_argument("--beta_end", type=float, default=None, help="LMSDiscreteScheduler::beta_end")
-    parser.add_argument("--beta_schedule", type=str, default=None, help="LMSDiscreteScheduler::beta_schedule")
-    # diffusion params
-    parser.add_argument("--num_inference_steps", type=int, default=None, help="num inference steps")
-    parser.add_argument("--guidance_scale", type=float, default=None, help="guidance scale")
-    parser.add_argument("--eta", type=float, default=None, help="eta")
-    # prompt
-    parser.add_argument("--prompt", type=str, default="Street-art painting of Tower in style of Banksy, photorealism", help="prompt")
-    # img2img params
-    parser.add_argument("--init_image", type=str, default=None, help="path to initial image")
-    parser.add_argument("--strength", type=float, default=None, help="how strong the initial image should be noised [0.0, 1.0]")
-    # inpainting
-    parser.add_argument("--mask", type=str, default=None, help="mask of the region to inpaint on the initial image")
-    # output name
-    parser.add_argument("--output", type=str, default=None, help="output image prefix")
-    # loop
-    parser.add_argument("--n", type=int, default=1, help="Loop Count")
-    # loop Limit
-    parser.add_argument("--limit", type=int, default=100, help="Max Loop Count")
-     # dist dir
-    parser.add_argument("--save", type=str, default="./", help="save dir")
-
-    main(vars(parser.parse_args()))
+def handler(event, context):
+    gc.collect()
+    seed = event.setdefault('seed', DEFAULT_SEED)
+    if seed is None:
+        seed = random.randint(0, 2**30)
+    np.random.seed(seed)
+    if event.setdefault('init_image', DEFAULT_INIT_IMAGE) is None:
+        scheduler = LMSDiscreteScheduler(
+            beta_start=event.setdefault('beta_start', DEFAULT_BETA_START),
+            beta_end=event.setdefault('beta_end', DEFAULT_BETA_END),
+            beta_schedule=event.setdefault('beta_schedule', DEFAULT_BETA_SCHEDULE),
+            tensor_format="np"
+        )
+    else:
+        scheduler = PNDMScheduler(
+            beta_start=event.setdefault('beta_start', DEFAULT_BETA_START),
+            beta_end=event.setdefault('beta_end', DEFAULT_BETA_END),
+            beta_schedule=event.setdefault('beta_schedule', DEFAULT_BETA_SCHEDULE),
+            skip_prk_steps = True,
+            tensor_format="np"
+        )
+    engine = StableDiffusionEngine(
+        model=event.setdefault('model', DEFAULT_MODEL),
+        scheduler=scheduler,
+        tokenizer=event.setdefault('tokenizer', DEFAULT_TOKENIZER),
+        device=event.setdefault('device', DEFAULT_DEVICE),
+    )
+    image = engine(
+        prompt = event.setdefault('prompt', DEFAULT_PROMPT),
+        init_image = None if event.setdefault('init_image', DEFAULT_INIT_IMAGE) is None else cv2.imread('/tmp/' + event.setdefault('init_image', DEFAULT_INIT_IMAGE)),
+        mask = None if event.setdefault('mask', DEFAULT_MASK) is None else cv2.imread('/tmp/' + event.setdefault('mask', DEFAULT_MASK), 0),
+        strength = event.setdefault('strength', DEFAULT_STRENGTH),
+        num_inference_steps = event.setdefault('num_inference_steps', DEFAULT_NUM_INFERENCE_STEPS),
+        guidance_scale = event.setdefault('guidance_scale', DEFAULT_GUIDANCE_SCALE),
+        eta = event.setdefault('eta', DEFAULT_ETA)
+    )
+    cv2.imwrite('/tmp/' + event.setdefault('output', DEFAULT_OUTPUT), image)
+    gc.collect()
+    return  {"statusCode": 200, "body": { "seed":seed, "prompt": event.setdefault('prompt', DEFAULT_PROMPT) }}
