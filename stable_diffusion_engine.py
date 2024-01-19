@@ -6,8 +6,7 @@ from openvino.runtime import Core
 from transformers import CLIPTokenizer
 # utils
 from tqdm import tqdm
-from huggingface_hub import hf_hub_download
-from diffusers import LMSDiscreteScheduler, PNDMScheduler
+from diffusers import LMSDiscreteScheduler
 import cv2
 
 def result(var):
@@ -18,11 +17,11 @@ class StableDiffusionEngine:
     def __init__(
             self,
             scheduler,
-            model="bes-dev/stable-diffusion-v1-4-openvino",
-            tokenizer="openai/clip-vit-large-patch14",
+            # model="bes-dev/stable-diffusion-v1-4-openvino",
+            # tokenizer="openai/clip-vit-large-patch14",
             device="CPU"
     ):
-        self.tokenizer = CLIPTokenizer.from_pretrained(tokenizer)
+        self.tokenizer = CLIPTokenizer.from_pretrained('/var/task/tokenizer/')
         self.scheduler = scheduler
         # models
         self.core = Core()
@@ -30,27 +29,27 @@ class StableDiffusionEngine:
 
         # text features
         self._text_encoder = self.core.read_model(
-            hf_hub_download(repo_id=model, filename="text_encoder.xml"),
-            hf_hub_download(repo_id=model, filename="text_encoder.bin")
+            "/var/task/model/text_encoder.xml",
+            "/var/task/model/text_encoder.bin"
         )
         self.text_encoder = self.core.compile_model(self._text_encoder, device)
         # diffusion
         self._unet = self.core.read_model(
-            hf_hub_download(repo_id=model, filename="unet.xml"),
-            hf_hub_download(repo_id=model, filename="unet.bin")
+            "/var/task/model/unet.xml",
+            "/var/task/model/unet.bin"
         )
         self.unet = self.core.compile_model(self._unet, device)
         self.latent_shape = tuple(self._unet.inputs[0].shape)[1:]
         # decoder
         self._vae_decoder = self.core.read_model(
-            hf_hub_download(repo_id=model, filename="vae_decoder.xml"),
-            hf_hub_download(repo_id=model, filename="vae_decoder.bin")
+            "/var/task/model/vae_decoder.xml",
+            "/var/task/model/vae_decoder.bin"
         )
         self.vae_decoder = self.core.compile_model(self._vae_decoder, device)
         # encoder
         self._vae_encoder = self.core.read_model(
-            hf_hub_download(repo_id=model, filename="vae_encoder.xml"),
-            hf_hub_download(repo_id=model, filename="vae_encoder.bin")
+            "/var/task/model/vae_encoder.xml",
+            "/var/task/model/vae_encoder.bin"
         )
         self.vae_encoder = self.core.compile_model(self._vae_encoder, device)
         self.init_image_shape = tuple(self._vae_encoder.inputs[0].shape)[2:]

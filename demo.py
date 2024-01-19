@@ -53,9 +53,9 @@ def handler(event, context):
             tensor_format="np"
         )
     engine = StableDiffusionEngine(
-        model=event.setdefault('model', DEFAULT_MODEL),
+        # model=event.setdefault('model', DEFAULT_MODEL),
         scheduler=scheduler,
-        tokenizer=event.setdefault('tokenizer', DEFAULT_TOKENIZER),
+        # tokenizer=event.setdefault('tokenizer', DEFAULT_TOKENIZER),
         device=event.setdefault('device', DEFAULT_DEVICE),
     )
     image = engine(
