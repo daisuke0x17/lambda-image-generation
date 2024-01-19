@@ -1,31 +1,14 @@
-# stable_diffusion.openvino.lamda
 
-Implementation of Text-To-Image generation using Stable Diffusion on AWS Lambda(x86_64).
-<p align="center">
-  <img src="data/title.png"/>
-</p>
+## 概要
+### 準備
+AWS CLI のインストール
+- https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
-```
-This project is based on the "stable_diffusion.openvino" project and ported to AWS Lambda.
-https://github.com/bes-dev/stable_diffusion.openvino
-```
+Docker のインストール
+- https://docs.docker.com/engine/install/
 
-## Requirements
-
-* AWS Lambda(x86_64)
-* Python 3.9
-
-## Installation Instructions
-### 1. Installing AWS CLI & Docker
-Install AWS CLI and Docker.
-- AWS CLI
-https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-
-- Docker
-https://docs.docker.com/engine/install/
-
-### 2. Config AWS CLI
-Input AWS Access Key ID, AWS Secret Access Key, Default region name
+### AWS CLI の設定
+AWS Access Key ID, AWS Secret Access Key, Default region name を設定
 ```bash
 $ aws configure
 AWS Access Key ID [None]: YOUR ACCESSKEY
@@ -34,84 +17,33 @@ Default region name [None]: YOUR REGION (ex.us-east-1)
 Default output format [None]:
 ```
 
-### 3. Clone Project
-```bash
-$ git clone https://github.com/densenkouji/stable_diffusion.openvino.lambda.git
-$ cd stable_diffusion.openvino.lambda
-```
-
-### 4. Install
+### デプロイ
 ```bash:
 $ sh ./install.sh
 (Create New) Input AWS Lambda Function Name [ex.mySdFunction]: YOUR LAMBDA FUNCTION NAME
 ```
-Results
-```bash
-TRACINGCONFIG   PassThrough
-******* Complete!! *******
-The following resources were created.
-- Lmabda function: mySdFunction-yty7mdazmzzlywey
-- Role: mySdFunction-yty7mdazmzzlywey-role
-- ECR Repository: mysdfunction-yty7mdazmzzlywey-repo
-- S3 Bucket: mysdfunction-yty7mdazmzzlywey-bucket
-```
+※PC性能，ネットワーク環境によりますが，20分~40分程度は見ておいてください（イメージのビルドとプッシュが重いです）
 
-### 5. Test(Text-To-Image)
+## 参考
+とりあえずローカルで動かしてみる（ローカル汚したくない人は venv 使いましょう）
+- https://softantenna.com/blog/stable-diffusion-intel-cpu
 
-```bash
-$ aws lambda invoke \
-   --function-name mySdFunction-yty7mdazmzzlywey \
-   --invocation-type 'RequestResponse' \
-   --payload '{"prompt":"Street-art painting of Tower in style of Banksy"}' \
-   --cli-read-timeout 600 \
-   --cli-binary-format raw-in-base64-out \
-   output.text
-```
+WSL のメモリ不足が発生したら
+- https://zenn.dev/suzuki5080/articles/1438d52377b9df
 
-## Generate image from text description
+AWS ベースイメージを使った Lambda の作成
+- https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/python-image.html
 
-```bash
-usage: 
-{
-  "prompt": "Street-art painting of Tower in style of Banksy"
-}
+デプロイ用のシェルスクリプト拝借（イメージのビルドはこける）
+- https://github.com/densenkouji/stable_diffusion.openvino.lambda
 
-optional arguments:
-  lambda              lambda function name
-  seed                random seed for generating consistent images per prompt
-  beta_start          LMSDiscreteScheduler::beta_start
-  beta_end            LMSDiscreteScheduler::beta_end
-  beta_schedule       LMSDiscreteScheduler::beta_schedule
-  num_inference_steps num inference steps
-  guidance_scale      guidance scale
-  eta                 eta
-  prompt              prompt
-  init_image          filename to initial image (S3)
-  strength            how strong the initial image should be noised [0.0, 1.0]
-  mask                mask of the region to inpaint on the initial image
-  output              prefix output image name
-  n                   Loop count
-  limit               Loop limit
-```
+stable_diffusion.openvino 本体 (requirements 要確認)
+- https://github.com/bes-dev/stable_diffusion.openvino
 
-## Examples
+Lambda 特有のエラー
+- https://motemen.hatenablog.com/entry/2022/12/transformers-lambda
+- https://qiita.com/namkim/items/3edb9abe3871963bf0f7
 
-### Example Text-To-Image
-```bash
-python demo.py --lambda myFunc1-emrzmjvlngu9mwiw --n 5 --prompt "Street-art painting of Sakura with tower in style of Banksy"
-```
-
-### Example Image-To-Image
-```bash
-python demo.py --lambda myFunc1-emrzmjvlngu9mwiw --prompt "Street-art painting of Sakura with tower in style of Banksy" --init_image input.png --strength 0.5
-```
-
-## Acknowledgements
-* stable_diffusion.openvino: https://github.com/bes-dev/stable_diffusion.openvino
-* Original implementation of Stable Diffusion: https://github.com/CompVis/stable-diffusion
-* diffusers library: https://github.com/huggingface/diffusers
-
-## Disclaimer
-
-The authors are not responsible for the content generated using this project.
-Please, don't use this project to produce illegal, harmful, offensive etc. content.
+HuggingFace のキャッシュ
+- https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
+> The <CACHE_DIR> is usually your user’s home directory. However, it is customizable with the cache_dir argument on all methods, or by specifying either HF_HOME or HF_HUB_CACHE environment variable.
