@@ -1,5 +1,5 @@
 numpy==1.19.5
-opencv-python==4.5.5.64
+opencv-python==4.8.1.78
 transformers==4.16.2
 diffusers==0.2.4
 tqdm==4.64.0
